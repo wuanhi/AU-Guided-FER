@@ -1,0 +1,33 @@
+# Dataset
+data/*
+!data/README.md
+
+# Training outputs
+outputs/
+checkpoints/
+
+# Model weights
+*.pt
+*.pth
+*.ckpt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment
+.venv/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
