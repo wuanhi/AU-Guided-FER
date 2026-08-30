@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Optional
 from torch.utils.data import DataLoader
 from src.data.fer2013_dataset import FER2013Dataset
 from src.data.transforms import (
@@ -7,7 +8,12 @@ from src.data.transforms import (
     get_val_transform,
 )
 
-def build_dataloaders(data_cfg: dict, experiment_cfg: dict) -> tuple[DataLoader, DataLoader, DataLoader]:
+def build_dataloaders(
+    data_cfg: dict,
+    experiment_cfg: dict,
+    spatial_prior_generator=None,
+    landmarks_dict: Optional[dict] = None,
+) -> tuple[DataLoader, DataLoader, DataLoader]:
     csv_path = data_cfg["dataset"]["csv_path"]
     image_size = data_cfg["image"]["size"]
     augmentation_cfg = experiment_cfg["augmentation"]
@@ -30,18 +36,24 @@ def build_dataloaders(data_cfg: dict, experiment_cfg: dict) -> tuple[DataLoader,
         csv_path=csv_path,
         split=data_cfg["splits"]["train"],
         transform=train_transform,
+        spatial_prior_generator=spatial_prior_generator,
+        landmarks_dict=landmarks_dict,
     )
 
     val_dataset = FER2013Dataset(
         csv_path=csv_path,
         split=data_cfg["splits"]["val"],
         transform=val_transform,
+        spatial_prior_generator=spatial_prior_generator,
+        landmarks_dict=landmarks_dict,
     )
 
     test_dataset = FER2013Dataset(
         csv_path=csv_path,
         split=data_cfg["splits"]["test"],
         transform=test_transform,
+        spatial_prior_generator=spatial_prior_generator,
+        landmarks_dict=landmarks_dict,
     )
 
     train_loader = DataLoader(

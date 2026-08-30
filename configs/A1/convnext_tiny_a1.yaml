@@ -1,0 +1,45 @@
+model:
+  name: convnext_a1
+  num_classes: 7
+  pretrained: true
+  pretrained_source: imagenet22k
+  drop_path_rate: 0.1
+
+training:
+  epochs: 100
+  seed: 2001
+  amp: true
+  gradient_clip: 1.0
+  gradient_accumulation_steps: 1
+  early_stopping_patience: 12
+  lambda_cos: 0.1   
+
+optimizer:
+  name: adamw
+  lr: 0.0001
+
+scheduler:
+  name: cosine_warm_restarts
+  warmup_steps: 128
+  cycle_steps: 1024
+  min_lr: 0.0
+  max_lr: 0.001
+
+ema:
+  beta: 0.99
+  update_every: 16
+
+augmentation:
+  horizontal_flip: true
+  vertical_flip: true
+  resize_before_crop: 236
+  rotation_degrees: 20
+  crop_size: 224
+
+loss:
+  name: cross_entropy
+  label_smoothing: 0.2
+
+checkpoint:
+  monitor: accuracy
+  mode: max
