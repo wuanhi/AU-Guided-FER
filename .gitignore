@@ -3,7 +3,6 @@ data/*
 !data/README.md
 
 # Training outputs
-outputs/
 checkpoints/
 
 # Model weights

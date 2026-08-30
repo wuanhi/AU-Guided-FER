@@ -1,0 +1,12 @@
+--extra-index-url https://download.pytorch.org/whl/cu126
+
+numpy==2.0.2
+pandas==2.2.2
+scikit-learn==1.9.0
+matplotlib==3.11.1
+Pillow==12.3.0
+PyYAML==6.0.3
+torch==2.13.0+cu126
+torchvision==0.28.0+cu126
+tqdm==4.70.0
+ema-pytorch==0.8.3

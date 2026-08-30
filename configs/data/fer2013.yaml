@@ -1,0 +1,17 @@
+dataset:
+  name: FER2013
+  csv_path: data/fer2013.csv
+
+splits:
+  train: Training
+  val: PublicTest
+  test: PrivateTest
+
+image:
+  size: 224
+
+dataloader:
+  train_batch_size: 64
+  val_batch_size: 1
+  test_batch_size: 32
+  num_workers: 0
