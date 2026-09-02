@@ -1,6 +1,6 @@
 """
 1. Load offline landmarks: data/fer2013_landmarks.pkl
-2. SpatialPriorGenerator for AU Heatmap P (1 kênh, 14x14)
+2. SpatialPriorGenerator for AU Heatmap P (1 channel, 14x14)
 3. Model: ConvNeXt_A1 trích xuất Feature Stage 2 -> T (Channel Average Pooling)
 4. Loss: L_total = L_CE(logits, labels) + lambda_cos * L_cos(T, P)
 """

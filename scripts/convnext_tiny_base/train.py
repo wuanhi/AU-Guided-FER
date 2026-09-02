@@ -80,7 +80,7 @@ def main():
             optimizer=optimizer,
             scheduler=scheduler,
             loss_fn=loss_fn,
-            device=device,
+            device=device, 
             scaler=scaler,
             ema=ema,
             use_amp=use_amp,
@@ -133,7 +133,6 @@ def main():
 
     print("\n[THÀNH CÔNG] Quá trình huấn luyện đã hoàn tất!")
     print(f"Best Checkpoint: {(checkpoint_dir / 'best.pt').resolve()}")
-
 
 if __name__ == "__main__":
     main()

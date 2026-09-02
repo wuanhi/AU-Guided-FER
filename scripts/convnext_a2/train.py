@@ -1,4 +1,7 @@
-""" ConvNeXt-Tiny + Anatomical Region Decomposition (K=6) + LRP Attention + Fusion """
+"""
+ConvNeXt-Tiny + Anatomical Region Decomposition (K=6) + LRP Attention + Fusion.
+flexible: --version [v1 | v2]
+"""
 from __future__ import annotations
 import argparse
 import csv
@@ -9,11 +12,9 @@ import numpy as np
 import torch
 from ema_pytorch import EMA
 from tqdm import tqdm
-
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-
 from src.data.dataloader import build_dataloaders
 from src.data.spatial_prior_generator import SpatialPriorGenerator
 from src.evaluation.metrics import compute_metrics
@@ -25,7 +26,6 @@ from src.training.optimizer import build_optimizer
 from src.training.scheduler import build_scheduler
 from src.utils.config import load_config
 from src.utils.seed import set_seed
-
 
 def _train_one_epoch_a2(
     model: torch.nn.Module,
@@ -44,7 +44,6 @@ def _train_one_epoch_a2(
 ) -> dict:
     model.train()
     amp_enabled = use_amp and device.type == "cuda"
-
     batch_losses_total = []
     batch_losses_cls = []
     batch_losses_cos = []
@@ -53,7 +52,6 @@ def _train_one_epoch_a2(
     all_predictions = []
 
     pbar = tqdm(dataloader, desc="Training A2 (6 Regions)")
-
     for batch_idx, (images, labels, heatmaps_P, valid_masks) in enumerate(pbar):
         images = images.to(device)
         labels = labels.to(device)
@@ -62,7 +60,6 @@ def _train_one_epoch_a2(
 
         with torch.amp.autocast(device_type=device.type, enabled=amp_enabled):
             logits, A = model(images)            # logits: (B, 7), A: (B, 6, 14, 14)
-
             loss_cls = loss_cls_fn(logits, labels)
             loss_cos = loss_cos_fn(A, heatmaps_P, valid_masks)
             loss = loss_cls + lambda_cos * loss_cos
@@ -87,21 +84,18 @@ def _train_one_epoch_a2(
 
         all_targets.extend(labels.detach().cpu().tolist())
         all_predictions.extend(predictions.detach().cpu().tolist())
-
         pbar.set_postfix({
             "loss": f"{np.mean(batch_losses_total):.4f}",
             "cls": f"{np.mean(batch_losses_cls):.4f}",
             "cos": f"{np.mean(batch_losses_cos):.4f}",
             "acc": f"{np.mean(batch_accuracies) * 100:.1f}%",
         })
-
     metrics = compute_metrics(all_targets, all_predictions)
     metrics["loss"] = float(np.mean(batch_losses_total))
     metrics["loss_cls"] = float(np.mean(batch_losses_cls))
     metrics["loss_cos"] = float(np.mean(batch_losses_cos))
     metrics["accuracy"] = float(np.mean(batch_accuracies))
     return metrics
-
 
 @torch.no_grad()
 def _evaluate_one_epoch_a2(
@@ -129,7 +123,6 @@ def _evaluate_one_epoch_a2(
         labels = labels.to(device)
         heatmaps_P = heatmaps_P.to(device)
         valid_masks = valid_masks.to(device)
-
         with torch.amp.autocast(device_type=device.type, enabled=amp_enabled):
             logits, A = model(images)
             loss_cls = loss_cls_fn(logits, labels)
@@ -177,20 +170,36 @@ def _append_epoch_log_a2(path: Path, epoch: int, lr: float, train_metrics: dict,
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="FER2013 Stage 1 – Ablation A2 Training")
-    parser.add_argument("--config", default="configs/A2/convnext_tiny_a2.yaml", type=str, help="Path to A2 config")
+    parser.add_argument("--config", default="configs/A2/convnext_tiny_a2_v2.yaml", type=str, help="Path to A2 config")
     parser.add_argument("--data-config", default="configs/data/fer2013.yaml", type=str, help="Path to data config")
     parser.add_argument("--landmarks-path", default="data/fer2013_landmarks.pkl", type=str, help="Path to landmarks .pkl")
     parser.add_argument("--lambda-cos", type=float, default=None, help="Override lambda_cos weight in YAML")
+    parser.add_argument(
+        "--version",
+        type=str,
+        default=None,
+        choices=["v1", "v2"],
+        help="Version A2: 'v1' (Fixed Fusion không gate) or 'v2' (Symmetric Adaptive Gate) (default from YAML)",
+    )
+    parser.add_argument(
+        "--fusion-type",
+        type=str,
+        default=None,
+        choices=["symmetric_adaptive", "fixed_avg"],
+        help="Fusion type for training (default from YAML)",
+    )
 
     args = parser.parse_args()
     cfg = load_config(args.config)
     data_cfg = load_config(args.data_config)
-
+    # prior choose ver from CLI args, else from YAML, else default to v2
+    version: str = args.version if args.version is not None else cfg["model"].get("version", "v2")
+    fusion_type: str = args.fusion_type if args.fusion_type is not None else cfg["model"].get("fusion_type", None)
     lambda_cos: float = args.lambda_cos if args.lambda_cos is not None else cfg["training"].get("lambda_cos", 0.1)
-    set_seed(cfg["training"]["seed"])
 
+    set_seed(cfg["training"]["seed"])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Device: {device} | Lambda Cosine: {lambda_cos}")
+    print(f"Device: {device} | Lambda Cosine: {lambda_cos} | Model Version: {version.upper()} | Fusion Type: {fusion_type}")
     if device.type == "cuda":
         print("GPU:", torch.cuda.get_device_name(0))
 
@@ -209,7 +218,7 @@ def main() -> None:
     num_regions = cfg["model"].get("num_regions", 6)
     prior_gen = SpatialPriorGenerator(target_size=14, orig_size=224, num_regions=num_regions)
 
-    # Dataloaders
+    #Dataloaders
     train_loader, val_loader, _ = build_dataloaders(
         data_cfg,
         cfg,
@@ -217,23 +226,21 @@ def main() -> None:
         landmarks_dict=landmarks_dict,
     )
     print(f"Train samples: {len(train_loader.dataset):,} | Val samples: {len(val_loader.dataset):,}")
-
-    # ConvNeXt_A2
+    #ConvNeXt_A2 
     model = build_convnext_a2(
+        version=version,
         num_classes=cfg["model"]["num_classes"],
         num_regions=num_regions,
         pretrained=cfg["model"]["pretrained"],
         drop_path_rate=cfg["model"]["drop_path_rate"],
-        fusion_type=cfg["model"].get("fusion_type", "symmetric_adaptive"),
+        fusion_type=fusion_type,
     ).to(device)
 
     # Loss functions
     loss_cls_fn = build_classification_loss(cfg)
     loss_cos_fn = CosineSpatialAlignmentLoss().to(device)
-
     optimizer = build_optimizer(model, cfg)
     scheduler = build_scheduler(optimizer, cfg)
-
     use_amp = cfg["training"]["amp"]
     amp_enabled = use_amp and device.type == "cuda"
     scaler = torch.amp.GradScaler("cuda", enabled=amp_enabled)

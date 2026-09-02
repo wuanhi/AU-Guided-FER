@@ -1,7 +1,5 @@
 import torch
 from torchvision import transforms
-
-
 def get_train_transform(
     image_size,
     augmentation_cfg,

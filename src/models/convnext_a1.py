@@ -1,6 +1,6 @@
 """
-Ablation A1: ConvNeXt-Tiny + AU Spatial Cosine Supervision.
-Extract Stage 2 feature F2 (384x14x14), calculate T = ChannelAvg(F2).
+Ablation A1: ConvNeXt-Tiny + AU Spatial Cosine Supervision
+Extract Stage 2 feature F2 (Bx384x14x14), calculate T = ChannelAvg(F2)
 """
 from __future__ import annotations
 import torch
@@ -25,16 +25,15 @@ class ConvNeXt_A1(nn.Module):
         """
         Returns:
             logits: (B, num_classes)
-            T:      (B, 1, 14, 14) - Bản đồ attention trích xuất từ Stage 2
+            T: (B, 1, 14, 14) - Feature map from Stage 2
         """
         # Forward Stem, Stage 0, 1, 2
         for i in range(3):
             x = self.backbone.downsample_layers[i](x)
             x = self.backbone.stages[i](x)
 
-        F2 = x  # (B, 384, 14, 14)
-
-        # Extract spatial representation T via Channel Average Pooling 
+        F2 = x # (B, 384, 14, 14)
+        # Extract spatial representation T by Channel Average Pooling 
         T = F2.mean(dim=1, keepdim=True)  # (B, 1, 14, 14)
 
         x = self.backbone.downsample_layers[3](F2)

@@ -81,7 +81,7 @@ def plot_and_save_confusion_matrix(y_true: list, y_pred: list, out_path: Path, t
 
 def main():
     parser = argparse.ArgumentParser(description="Ablation A1 Test Evaluation")
-    parser.add_argument("--checkpoint", type=str, default="checkpoints/convnext_tiny_a1/best.pt", help="Path to checkpoint")
+    parser.add_argument("--checkpoint", type=str, default="checkpoints/convnext_tiny_a1/best.pt", help="Path to checkpoint (Local path or hf://twuan/repo/file.pt)")
     parser.add_argument("--config", type=str, default="configs/A1/convnext_tiny_a1.yaml", help="Path to A1 config")
     parser.add_argument("--data-config", type=str, default="configs/data/fer2013.yaml", help="Path to data config")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
@@ -95,10 +95,6 @@ def main():
     print(f"Device: {device}")
     if device.type == "cuda":
         print("GPU:", torch.cuda.get_device_name(0))
-
-    ckpt_path = Path(args.checkpoint)
-    if not ckpt_path.exists():
-        raise FileNotFoundError(f"[ERROR] Không tìm thấy checkpoint: {ckpt_path}")
 
     _, _, test_loader = build_dataloaders(data_cfg, cfg)
     print(f"Số lượng mẫu kiểm thử (Test Samples): {len(test_loader.dataset):,}")
@@ -116,12 +112,12 @@ def main():
     ).to(device)
 
     checkpoint = load_checkpoint(
-        path=ckpt_path,
+        path=args.checkpoint,
         model=model,
         ema=ema,
         device=device,
     )
-    print(f"\n[INFO] Đã nạp thành công Checkpoint: {ckpt_path}")
+    print(f"\n[INFO] Đã nạp thành công Checkpoint: {args.checkpoint}")
     if "epoch" in checkpoint:
         print(f"[INFO] Checkpoint Epoch đạt Best: {checkpoint['epoch']}")
     if "best_acc" in checkpoint:
@@ -157,7 +153,6 @@ def main():
         out_path=out_dir / "confusion_matrix_a1_ema.png",
         title="A1 Confusion Matrix (ConvNeXt-Tiny + AU Cosine - TenCrop)",
     )
-
 
 if __name__ == "__main__":
     main()

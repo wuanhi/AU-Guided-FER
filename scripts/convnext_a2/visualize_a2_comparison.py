@@ -50,11 +50,6 @@ def main():
     args = parser.parse_args()
     device = torch.device(args.device)
 
-    ckpt_path = Path(args.checkpoint)
-    if not ckpt_path.exists():
-        print(f"[ERROR] Không tìm thấy checkpoint tại: {ckpt_path}")
-        return
-
     cfg = load_config(args.config)
     data_cfg = load_config(args.data_config)
 
@@ -71,7 +66,7 @@ def main():
         fusion_type=cfg["model"].get("fusion_type", "symmetric_adaptive"),
     ).to(device)
 
-    load_checkpoint(ckpt_path, model=model, device=device)
+    load_checkpoint(path=args.checkpoint, model=model, device=device)
     model.eval()
 
     transform = get_val_transform(data_cfg["image"]["size"], cfg["augmentation"])

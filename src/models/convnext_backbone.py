@@ -32,7 +32,7 @@ class LayerNorm(nn.Module):
         self.normalized_shape = (normalized_shape,)
 
     def forward(self, x):
-        if self.data_format == "channels_last":
+        if self.data_format == "channels_last": # py sp
             return F.layer_norm(
                 x,
                 self.normalized_shape,
@@ -48,7 +48,6 @@ class LayerNorm(nn.Module):
             self.weight[:, None, None] * x
             + self.bias[:, None, None]
         )
-
         return x
 
 
@@ -114,7 +113,6 @@ class Block(nn.Module):
         )
 
         x = self.norm(x)
-
         x = self.pwconv1(x)
         x = self.act(x)
         x = self.pwconv2(x)

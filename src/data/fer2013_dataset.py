@@ -55,12 +55,10 @@ class FER2013Dataset(Dataset):
 
     def __getitem__(self, idx: int):
         row = self.df.iloc[idx]
-
         pixels = np.fromstring(row["pixels"], dtype=np.uint8, sep=" ")
         image = pixels.reshape(48, 48)
         image = Image.fromarray(image, mode="L")
         label = int(row["emotion"])
-
         if self.transform:
             image = self.transform(image)
 
@@ -68,7 +66,6 @@ class FER2013Dataset(Dataset):
             original_idx = int(row["_original_idx"])
             pkl_key = f"{self.split}/{original_idx}"
             landmarks = self.landmarks_dict.get(pkl_key, None)
-
             heatmap_P, valid_mask = self.spatial_prior_generator.generate(
                 landmarks=landmarks,
                 emotion_label=label,
